@@ -118,7 +118,6 @@ class LoginViewSet(viewsets.ViewSet):
 
         return ObtainAuthToken().as_view()(request=request._request)
 
-    # "token": "b5911cf62533755aa4958fec22c8d1913f7b50f6"
 
 
 
