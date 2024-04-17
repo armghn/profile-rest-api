@@ -1,14 +1,15 @@
 from django.shortcuts import render
+from rest_framework.authtoken.models import Token
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, viewsets, filters
 from rest_framework.authentication import TokenAuthentication
-from .serializers import HelloSerializer, UserProfileSerializer
-from .models import UserProfile
+from .serializers import HelloSerializer, UserProfileSerializer, ProfileFeedItemSerializer
+from .models import UserProfile, ProfileFeedItem
 from . import permissions
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.authtoken.views import ObtainAuthToken
-
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 
 class HelloAPIView(APIView):
     """Test API View."""
@@ -101,9 +102,9 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     """Handles creating, reading and updating profiles."""
 
     serializer_class = UserProfileSerializer
+    queryset = UserProfile.objects.all()
     authentication_classes = [TokenAuthentication]
     permission_classes = [permissions.UpdateOwnProfile]
-    queryset = UserProfile.objects.all()
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'email']
 
@@ -116,8 +117,20 @@ class LoginViewSet(viewsets.ViewSet):
     def create(self, request):
         """Use the ObtainAuthToken APIView to validate and create a token."""
 
-        return ObtainAuthToken().as_view()(request=request._request)
+        obtain_auth_token_view = ObtainAuthToken.as_view()
+        response = obtain_auth_token_view(request=request._request)
+        return response
 
 
+class UserProfileFeedViewSet(viewsets.ModelViewSet):
 
+    authentication_classes = [TokenAuthentication]
+    serializer_class = ProfileFeedItemSerializer
+    queryset = ProfileFeedItem.objects.all()
+    permission_classes = [permissions.PostOwnStatus, IsAuthenticated]
+
+    def perform_create(self, serializer):
+        """Set the user profile to the logged-in user."""
+
+        serializer.save(user_profile=self.request.user)
 
